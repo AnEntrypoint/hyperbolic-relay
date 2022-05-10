@@ -28,7 +28,6 @@ var proxy = httpProxy.createProxyServer({
   timeout: 360000
 });
 const doServer = async function (req, res) {
-  console.log(req.headers);
   if (!req.headers.host) return;
   const split = req.headers.host.split('.');
   const publicKey = await getKey(split[split.length - 3]);
