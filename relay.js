@@ -68,16 +68,22 @@ const getKey = async (name) => {
   }
   if (decoded.length == 32) publicKey = Buffer.from(decoded);
   else {
+    console.log(name, 'is not a key');
     if(!known[name]) {
       try {
         known[name] = JSON.parse(fs.readFileSync('known/'+name));
-        known[name].key = Buffer.from(known[name].key, 'hex');
-      } catch(e) {}
+        known[name].key = Buffer.from(known[name].keyback, 'hex');
+      } catch(e) {
+        console.log('not read from file', e);
+      }
     }
     if(known[name] && new Date().getTime() - known[name].last < 15*60*1000) {
+      console.log('cached from file');
 	    return known[name].key;
     }
+    console.log('trying to look it up')
     const target = DHT.hash(Buffer.from(name));
+    console.log("hash is:", name);
     const result = await toArray(node.lookup(target));
     if (result.length > 0) {
       if(known[name]) {
@@ -87,7 +93,7 @@ const getKey = async (name) => {
               if(known[name.key] == peer.publicKey) {
                 known[name].last = new Date().getTime();
                 foundknown = true;
-                known[name].key =known[name].key.toString('hex');
+                known[name].keyback =known[name].key.toString('hex');
                 fs.writeFileSync('known/'+name, JSON.stringify(known[name]));
               }
           }
@@ -95,21 +101,23 @@ const getKey = async (name) => {
         if(!foundknown && new Date().getTime() - known[name].last > 60*60^1000*24) {
           known[name].key = Buffer.from(result[0].peers[0].publicKey);
           known[name].last = new Date().getTime();
-          known[name].key =known[name].key.toString('hex');
+          known[name].keyback =known[name].key.toString('hex');
           fs.writeFileSync('known/'+name, JSON.stringify(known[name]));
         }
       } else {
         known[name]={};
         known[name].key = Buffer.from(result[0].peers[0].publicKey);
         known[name].last = new Date().getTime();
-        known[name].key =known[name].key.toString('hex');
+        known[name].keyback =known[name].key.toString('hex');
         fs.writeFileSync('known/'+name, JSON.stringify(known[name]));
       }
+      console.log(known[name].key);
       if(known[name]) return known[name].key;
     } else {
       console.log('no results');
     }
   }
+  
   return publicKey;
 }
 
@@ -121,7 +129,7 @@ net.createServer(function (local) {
       if (split[split.length - 3]) {
         const publicKey = await getKey(split[split.length - 3]);
         if (!publicKey) return;
-        console.log(publicKey);
+        //console.log(publicKey);
         const socket = node.connect(publicKey);
         socket.write('https');
         socket.write(data);
