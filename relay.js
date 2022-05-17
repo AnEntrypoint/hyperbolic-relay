@@ -30,7 +30,9 @@ var proxy = httpProxy.createProxyServer({
 const doServer = async function (req, res) {
   if (!req.headers.host) return;
   const split = req.headers.host.split('.');
-  const publicKey = await getKey(split[split.length - 3]);
+  let publicKey = split[split.length - 3];
+  if(publicKey == 'sites') publicKey = split[split.length - 4];
+  publicKey = await getKey(publicKey);
   if (!tunnels[publicKey]) {
     const port = 1337 + ((mod++) % 1000);
     try {
@@ -127,7 +129,9 @@ net.createServer(function (local) {
     if (server) {
       const split = server.split('.');
       if (split[split.length - 3]) {
-        const publicKey = await getKey(split[split.length - 3]);
+	  let publicKey = split[split.length - 3];
+	  if(publicKey == 'sites') publicKey = split[split.length - 4];
+	  publicKey = await getKey(publicKey);
         if (!publicKey) return;
         //console.log(publicKey);
         const socket = node.connect(publicKey);
